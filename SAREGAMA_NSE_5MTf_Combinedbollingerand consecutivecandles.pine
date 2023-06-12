@@ -1,0 +1,83 @@
+//@version=4
+strategy("Optimized Combined Strategy: Bollinger Bands, Z-score and Consecutive Candles", overlay=true, initial_capital=100000)
+
+// Input parameters for the Bollinger Bands strategy
+length = input(98, title="Moving Average Length", type=input.integer)
+mult = input(1.6, title="Standard Deviation Multiplier", type=input.float)
+z_score_threshold = input(2.8, title="Z-Score Threshold", type=input.float)
+stop_loss_percent = input(5, title="Stop Loss Percentage", type=input.float) / 100
+
+// Input parameters for the Consecutive Candles strategy
+consecutive_candles = input(5, title="Consecutive Candles", type=input.integer)
+risk_percent = input(5, title="Risk Percent per Trade", type=input.float) / 100
+
+// Calculate the moving average and Bollinger Bands
+moving_average = sma(close, length)
+basis = sma(close, length)
+dev = mult * stdev(close, length)
+upper_band = basis + dev
+lower_band = basis - dev
+
+// Calculate Z-score
+z_score = (close - basis) / dev
+
+// Define entry conditions for Bollinger Bands strategy
+long_entry_bb = (crossover(close, lower_band) and z_score <= -z_score_threshold) or (crossover(close, lower_band) and close[1] <= lower_band[1])
+short_entry_bb = (crossunder(close, upper_band) and z_score >= z_score_threshold) or (crossunder(close, upper_band) and close[1] >= upper_band[1])
+
+// Check for consecutive bullish or bearish candles
+bullish_streak = sum(close > open ? 1 : 0, consecutive_candles)
+bearish_streak = sum(close < open ? 1 : 0, consecutive_candles)
+
+// Identify supply and demand zones
+supply_zone = bearish_streak[1] >= consecutive_candles ? high[1] : na
+demand_zone = bullish_streak[1] >= consecutive_candles ? low[1] : na
+
+// Entry signals for Consecutive Candles strategy
+long_entry_cc = crossover(close, demand_zone)
+short_entry_cc = crossunder(close, supply_zone)
+
+// Trade size in rupees (1,00,000)
+trade_value = 100000
+trade_size = floor(trade_value / close)
+
+/// Combined long entry condition
+long_entry_combined = (long_entry_bb or long_entry_cc) and (strategy.position_size <= 0)
+// Combined short entry condition
+short_entry_combined = (short_entry_bb or short_entry_cc) and (strategy.position_size >= 0)
+
+// Execute trades
+strategy.entry("Long Combined", strategy.long, qty=trade_size, when=long_entry_combined)
+strategy.entry("Short Combined", strategy.short, qty=trade_size, when=short_entry_combined)
+
+
+// Exit conditions for Bollinger Bands strategy
+long_exit_bb = cross(close, moving_average) or cross(close, upper_band)
+short_exit_bb = cross(close, moving_average) or cross(close, lower_band)
+
+// Close positions based on exit conditions for Bollinger Bands strategy
+strategy.close("Long BB", when=long_exit_bb)
+strategy.close("Short BB", when=short_exit_bb)
+
+// Stop loss for long and short positions
+strategy.exit("Long Stop Loss", "Long BB", stop=trade_size * close * stop_loss_percent)
+
+
+// Exit conditions for Consecutive Candles strategy
+long_exit_cc = cross(close, moving_average) or cross(close, supply_zone)
+short_exit_cc = cross(close, moving_average) or cross(close, demand_zone)
+
+// Close positions based on exit conditions for Consecutive Candles strategy
+strategy.close("Long CC", when=long_exit_cc)
+strategy.close("Short CC", when=short_exit_cc)
+
+// Stop loss for short positions
+strategy.exit("Short Stop Loss", "Short BB", stop=trade_size * close * stop_loss_percent)
+strategy.exit("Short Stop Loss", "Short CC", stop=trade_size * close * stop_loss_percent)
+
+// Plot the moving average, Bollinger Bands, and supply and demand zones
+plot(moving_average, title="Moving Average", color=color.blue, linewidth=2)
+plot(upper_band, title="Upper Bollinger Band", color=color.red, linewidth=1)
+plot(lower_band, title="Lower Bollinger Band", color=color.green, linewidth=1)
+line.new(x1=bar_index[1], y1=supply_zone, x2=bar_index, y2=supply_zone, color=color.red, width=1, extend=extend.right)
+line.new(x1=bar_index[1], y1=demand_zone, x2=bar_index, y2=demand_zone, color=color.green, width=1, extend=extend.right)
