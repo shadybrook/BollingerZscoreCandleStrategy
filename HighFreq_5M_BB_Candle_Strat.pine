@@ -2,14 +2,14 @@
 strategy("Optimized Combined Strategy: Bollinger Bands, Z-score and Consecutive Candles", overlay=true, initial_capital=100000)
 
 // Input parameters for the Bollinger Bands strategy
-length = input(98, title="Moving Average Length", type=input.integer)
-mult = input(1.6, title="Standard Deviation Multiplier", type=input.float)
-z_score_threshold = input(2.8, title="Z-Score Threshold", type=input.float)
-stop_loss_percent = input(5, title="Stop Loss Percentage", type=input.float) / 100
+length = input(100, title="Moving Average Length", type=input.integer)
+mult = input(1, title="Standard Deviation Multiplier", type=input.float)
+z_score_threshold = input(1, title="Z-Score Threshold", type=input.float)
+stop_loss_percent = input(1, title="Stop Loss Percentage", type=input.float) / 100
 
 // Input parameters for the Consecutive Candles strategy
-consecutive_candles = input(5, title="Consecutive Candles", type=input.integer)
-risk_percent = input(5, title="Risk Percent per Trade", type=input.float) / 100
+consecutive_candles = input(1, title="Consecutive Candles", type=input.integer)
+risk_percent = input(1, title="Risk Percent per Trade", type=input.float) / 100
 
 // Calculate the moving average and Bollinger Bands
 moving_average = sma(close, length)
